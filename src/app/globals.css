@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "IBM Plex Sans", "Aptos", "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Aptos Display", "Trebuchet MS", sans-serif;
+  --background: 216 33% 97%;
+  --foreground: 216 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 216 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 216 47% 11%;
+  --primary: 169 68% 24%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 216 28% 92%;
+  --secondary-foreground: 216 34% 20%;
+  --muted: 216 25% 92%;
+  --muted-foreground: 216 14% 42%;
+  --accent: 33 92% 94%;
+  --accent-foreground: 24 47% 20%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 216 20% 84%;
+  --input: 216 20% 84%;
+  --ring: 169 68% 24%;
+  --radius: 0.9rem;
+  --chart-1: 169 68% 24%;
+  --chart-2: 28 75% 48%;
+  --chart-3: 347 65% 56%;
+  --chart-4: 215 64% 38%;
+  --chart-5: 42 88% 53%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(13, 148, 136, 0.1), transparent 25%),
+    radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.12), transparent 22%),
+    hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

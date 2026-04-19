@@ -1,0 +1,994 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum RecordStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ProductType {
+  RAW_MATERIAL
+  PACKAGING_MATERIAL
+  FINISHED_SACHET
+  BUNDLE
+  SERVICE
+}
+
+enum VariantType {
+  RAW_MATERIAL
+  PACKAGING_MATERIAL
+  FINISHED_SACHET
+  DISCOVERY_PACK
+  TRAINING_BOX
+  MONTHLY_BUNDLE
+  CUSTOM_SACHET
+  SERVICE
+}
+
+enum LocationType {
+  FACTORY_RAW
+  FACTORY_FINISHED
+  ORIGINS_SELLABLE
+  RESERVED
+  DAMAGED
+  QUARANTINE
+  SAMPLES
+  RETURNS_INSPECTION
+}
+
+enum MovementType {
+  RECEIPT
+  PRODUCTION_OUTPUT
+  PRODUCTION_CONSUMPTION
+  TRANSFER
+  SALE_ALLOCATION
+  SALE_DEDUCTION
+  RETURN
+  WRITE_OFF
+  DAMAGE
+  EXPIRY
+  SAMPLE_USAGE
+  ADJUSTMENT
+  QC_RELEASE
+}
+
+enum QcStatus {
+  HOLD
+  RELEASED
+  QUARANTINED
+}
+
+enum ProductionStatus {
+  DRAFT
+  COMPLETED
+  CLOSED
+  VOIDED
+}
+
+enum SalesOrderSource {
+  MANUAL
+  SHOPIFY
+  WHOLESALE
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  FULFILLED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentState {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  REFUNDED
+  FAILED
+}
+
+enum FulfillmentStatus {
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  DELIVERED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  REFUNDED
+  FAILED
+}
+
+enum SalesChannelType {
+  SHOPIFY
+  MANUAL
+  WHOLESALE
+}
+
+enum PaymentMethodCode {
+  CASH
+  WHISH
+  CARD
+}
+
+enum ExpenseCategoryType {
+  DIRECT_DELIVERY
+  PAYMENT_FEE
+  MARKETING
+  SOFTWARE
+  SALARIES
+  PROFESSIONAL_FEES
+  ADMIN
+  MISC
+}
+
+enum VendorBillStatus {
+  DRAFT
+  APPROVED
+  POSTED
+  PAID
+  VOIDED
+}
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  CONTRA_REVENUE
+  COGS
+  EXPENSE
+}
+
+enum FiscalPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  VOIDED
+}
+
+enum JournalSourceType {
+  MANUAL_ORDER
+  SHOPIFY_ORDER
+  VENDOR_BILL
+  INVENTORY
+  PRODUCTION
+  SETTLEMENT
+  ADJUSTMENT
+  MANUAL
+}
+
+enum OrderLineType {
+  STANDARD
+  CUSTOM_FLAVOR_BUNDLE
+}
+
+enum ProductionLineType {
+  RAW_MATERIAL
+  PACKAGING
+  OVERHEAD
+}
+
+enum PartnerType {
+  FACTORY
+  DISTRIBUTOR
+  OTHER
+}
+
+enum SettlementPeriodType {
+  MONTHLY
+  QUARTERLY
+  YTD
+}
+
+enum SettlementStatus {
+  DRAFT
+  FINALIZED
+  VOIDED
+}
+
+enum SettlementLineType {
+  GROSS_SALES
+  DISCOUNT
+  REFUND
+  NET_SALES
+  COGS
+  DELIVERY
+  PAYMENT_FEE
+  OPEX
+  ADJUSTMENT
+  FACTORY_SHARE
+  ORIGINS_SHARE
+}
+
+enum ExpiryStatus {
+  UPCOMING
+  EXPIRED
+  DISPOSED
+}
+
+enum FileReferenceType {
+  MANUAL_ORDER
+  VENDOR_BILL
+  PRODUCTION_RUN
+  SETTLEMENT
+}
+
+model User {
+  id                    String              @id @default(cuid())
+  email                 String              @unique
+  name                  String
+  passwordHash          String
+  status                UserStatus          @default(ACTIVE)
+  roleId                String
+  role                  Role                @relation(fields: [roleId], references: [id])
+  lastLoginAt           DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  sessions              Session[]
+  auditLogs             AuditLog[]          @relation("AuditActor")
+  salesOrders           SalesOrder[]        @relation("OrderCreatedBy")
+  vendorBills           VendorBill[]        @relation("VendorBillCreatedBy")
+  journalEntries        JournalEntry[]      @relation("JournalCreatedBy")
+  settlementPeriods     SettlementPeriod[]  @relation("SettlementCreatedBy")
+  reportSnapshots       ReportSnapshot[]    @relation("ReportGeneratedBy")
+  productionRuns        ProductionRun[]     @relation("ProductionRunCreatedBy")
+  inventoryMovements    InventoryMovement[] @relation("InventoryMovementCreatedBy")
+  uploadedFiles         FileReference[]     @relation("FileUploadedBy")
+  closedFiscalPeriods   FiscalPeriod[]      @relation("FiscalPeriodClosedBy")
+}
+
+model Session {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  tokenHash    String        @unique
+  status       SessionStatus @default(ACTIVE)
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime      @default(now())
+  revokedAt    DateTime?
+
+  @@index([userId, status])
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  label       String
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model Company {
+  id                 String   @id @default(cuid())
+  legalName          String
+  brandName          String
+  baseCurrency       String
+  vatRate            Decimal  @db.Decimal(10, 4)
+  country            String
+  timezone           String
+  defaultCourierFee  Decimal  @db.Decimal(10, 2)
+  settlementNotes    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Warehouse {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  name      String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  locations Location[]
+  productionRuns ProductionRun[]
+}
+
+model Location {
+  id                 String              @id @default(cuid())
+  warehouseId        String
+  warehouse          Warehouse           @relation(fields: [warehouseId], references: [id])
+  code               String              @unique
+  name               String
+  type               LocationType
+  isSellable         Boolean             @default(false)
+  isReserved         Boolean             @default(false)
+  isDamaged          Boolean             @default(false)
+  isQuarantine       Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  balances           InventoryBalance[]
+  movementsFrom      InventoryMovement[] @relation("MovementFromLocation")
+  movementsTo        InventoryMovement[] @relation("MovementToLocation")
+
+  @@index([warehouseId, type])
+}
+
+model Flavor {
+  id          String               @id @default(cuid())
+  name        String               @unique
+  code        String               @unique
+  colorHex    String
+  description String?
+  variants    ProductVariant[]
+  bundleLines BundleDefinitionLine[]
+}
+
+model Product {
+  id                 String           @id @default(cuid())
+  code               String           @unique
+  name               String
+  type               ProductType
+  status             RecordStatus     @default(ACTIVE)
+  description        String?
+  defaultSaleUom     String           @default("unit")
+  defaultInventoryUom String          @default("unit")
+  tracksInventory    Boolean          @default(true)
+  isLotTracked       Boolean          @default(true)
+  isExpiryTracked    Boolean          @default(false)
+  vatRate            Decimal          @db.Decimal(10, 4)
+  defaultUnitCost    Decimal?         @db.Decimal(14, 4)
+  defaultUnitPrice   Decimal?         @db.Decimal(14, 2)
+  lowStockThreshold  Decimal?         @db.Decimal(14, 2)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  variants           ProductVariant[]
+}
+
+model ProductVariant {
+  id                      String                   @id @default(cuid())
+  productId               String
+  product                 Product                  @relation(fields: [productId], references: [id])
+  sku                     String                   @unique
+  name                    String
+  variantType             VariantType
+  flavorId                String?
+  flavor                  Flavor?                  @relation(fields: [flavorId], references: [id])
+  isSellable              Boolean                  @default(true)
+  tracksInventory         Boolean                  @default(true)
+  lotTracked              Boolean                  @default(true)
+  expiryTracked           Boolean                  @default(false)
+  active                  Boolean                  @default(true)
+  unitsPerSale            Decimal                  @default(1) @db.Decimal(14, 2)
+  defaultPrice            Decimal?                 @db.Decimal(14, 2)
+  lowStockThreshold       Decimal?                 @db.Decimal(14, 2)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  bundleDefinition        BundleDefinition?
+  boms                    BillOfMaterial[]
+  lots                    InventoryLot[]
+  movements               InventoryMovement[]
+  orderLines              OrderLine[]
+  shopifyLines            ShopifyOrderLine[]
+  bomLines                BillOfMaterialLine[]     @relation("BomComponentVariant")
+  bundleLines             BundleDefinitionLine[]   @relation("BundleComponentVariant")
+  productionOutputs       ProductionRunOutput[]
+  productionConsumptions  ProductionRunConsumption[]
+
+  @@index([productId, variantType])
+  @@index([flavorId, variantType])
+}
+
+model BundleDefinition {
+  id              String                 @id @default(cuid())
+  variantId       String                 @unique
+  variant         ProductVariant         @relation(fields: [variantId], references: [id])
+  type            VariantType
+  minimumUnits    Decimal?               @db.Decimal(14, 2)
+  fixedPrice      Decimal?               @db.Decimal(14, 2)
+  allowFlavorMix  Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  lines           BundleDefinitionLine[]
+}
+
+model BundleDefinitionLine {
+  id                 String          @id @default(cuid())
+  bundleDefinitionId String
+  bundleDefinition   BundleDefinition @relation(fields: [bundleDefinitionId], references: [id])
+  componentVariantId String?
+  componentVariant   ProductVariant? @relation("BundleComponentVariant", fields: [componentVariantId], references: [id])
+  flavorId           String?
+  flavor             Flavor?         @relation(fields: [flavorId], references: [id])
+  quantity           Decimal         @db.Decimal(14, 2)
+  isFlexible         Boolean         @default(false)
+  sortOrder          Int             @default(0)
+
+  @@index([bundleDefinitionId, sortOrder])
+}
+
+model BillOfMaterial {
+  id               String              @id @default(cuid())
+  code             String              @unique
+  name             String
+  productVariantId String
+  productVariant   ProductVariant      @relation(fields: [productVariantId], references: [id])
+  batchSize        Decimal             @db.Decimal(14, 2)
+  version          Int                 @default(1)
+  status           RecordStatus        @default(ACTIVE)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  lines            BillOfMaterialLine[]
+  productionRuns   ProductionRun[]
+}
+
+model BillOfMaterialLine {
+  id                 String             @id @default(cuid())
+  bomId              String
+  bom                BillOfMaterial     @relation(fields: [bomId], references: [id])
+  lineType           ProductionLineType
+  componentVariantId String?
+  componentVariant   ProductVariant?    @relation("BomComponentVariant", fields: [componentVariantId], references: [id])
+  description        String?
+  quantity           Decimal            @db.Decimal(14, 4)
+  unitCost           Decimal?           @db.Decimal(14, 4)
+}
+
+model InventoryLot {
+  id               String             @id @default(cuid())
+  productVariantId String
+  productVariant   ProductVariant     @relation(fields: [productVariantId], references: [id])
+  lotCode          String             @unique
+  manufactureDate  DateTime?
+  expiryDate       DateTime?
+  receivedAt       DateTime           @default(now())
+  qcStatus         QcStatus           @default(HOLD)
+  costPerUnit      Decimal            @db.Decimal(14, 4)
+  productionRunId  String?
+  productionRun    ProductionRun?     @relation(fields: [productionRunId], references: [id])
+  notes            String?
+  balances         InventoryBalance[]
+  movements        InventoryMovement[]
+  outputs          ProductionRunOutput[]
+  consumptions     ProductionRunConsumption[]
+  expiryRecords    ExpiryRecord[]
+
+  @@index([productVariantId, qcStatus])
+  @@index([expiryDate])
+}
+
+model InventoryBalance {
+  id          String       @id @default(cuid())
+  lotId       String
+  lot         InventoryLot @relation(fields: [lotId], references: [id])
+  locationId  String
+  location    Location     @relation(fields: [locationId], references: [id])
+  quantity    Decimal      @db.Decimal(14, 2)
+  reservedQty Decimal      @default(0) @db.Decimal(14, 2)
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([lotId, locationId])
+  @@index([locationId, updatedAt])
+}
+
+model InventoryMovement {
+  id               String         @id @default(cuid())
+  movementType     MovementType
+  reason           String
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  lotId            String
+  lot              InventoryLot   @relation(fields: [lotId], references: [id])
+  fromLocationId   String?
+  fromLocation     Location?      @relation("MovementFromLocation", fields: [fromLocationId], references: [id])
+  toLocationId     String?
+  toLocation       Location?      @relation("MovementToLocation", fields: [toLocationId], references: [id])
+  quantity         Decimal        @db.Decimal(14, 2)
+  unitCost         Decimal        @db.Decimal(14, 4)
+  occurredAt       DateTime       @default(now())
+  referenceType    String
+  referenceId      String
+  notes            String?
+  createdById      String?
+  createdBy        User?          @relation("InventoryMovementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([productVariantId, occurredAt])
+  @@index([referenceType, referenceId])
+}
+
+model ProductionRun {
+  id               String                     @id @default(cuid())
+  code             String                     @unique
+  batchNumber      String                     @unique
+  bomId            String
+  bom              BillOfMaterial             @relation(fields: [bomId], references: [id])
+  warehouseId      String
+  warehouse        Warehouse                  @relation(fields: [warehouseId], references: [id])
+  runDate          DateTime
+  expiryDate       DateTime?
+  plannedQuantity  Decimal                    @db.Decimal(14, 2)
+  actualQuantity   Decimal                    @db.Decimal(14, 2)
+  qcStatus         QcStatus                   @default(HOLD)
+  status           ProductionStatus           @default(COMPLETED)
+  notes            String?
+  createdById      String
+  createdBy        User                       @relation("ProductionRunCreatedBy", fields: [createdById], references: [id])
+  outputs          ProductionRunOutput[]
+  consumptions     ProductionRunConsumption[]
+  lots             InventoryLot[]
+  createdAt        DateTime                   @default(now())
+
+  @@index([runDate, status])
+}
+
+model ProductionRunOutput {
+  id               String        @id @default(cuid())
+  productionRunId  String
+  productionRun    ProductionRun @relation(fields: [productionRunId], references: [id])
+  lotId            String
+  lot              InventoryLot  @relation(fields: [lotId], references: [id])
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  quantity         Decimal       @db.Decimal(14, 2)
+  unitCost         Decimal       @db.Decimal(14, 4)
+
+  @@index([productionRunId])
+}
+
+model ProductionRunConsumption {
+  id               String         @id @default(cuid())
+  productionRunId  String
+  productionRun    ProductionRun  @relation(fields: [productionRunId], references: [id])
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  lotId            String?
+  lot              InventoryLot?  @relation(fields: [lotId], references: [id])
+  quantity         Decimal        @db.Decimal(14, 2)
+  unitCost         Decimal        @db.Decimal(14, 4)
+
+  @@index([productionRunId])
+}
+
+model ExpiryRecord {
+  id         String       @id @default(cuid())
+  lotId      String
+  lot        InventoryLot @relation(fields: [lotId], references: [id])
+  status     ExpiryStatus
+  detectedAt DateTime     @default(now())
+  actionedAt DateTime?
+  notes      String?
+
+  @@index([status, detectedAt])
+}
+
+model Customer {
+  id         String       @id @default(cuid())
+  code       String       @unique
+  name       String
+  phone      String?
+  email      String?
+  city       String?
+  notes      String?
+  createdAt  DateTime     @default(now())
+  orders     SalesOrder[]
+}
+
+model Vendor {
+  id               String       @id @default(cuid())
+  code             String       @unique
+  name             String
+  type             String
+  email            String?
+  phone            String?
+  currency         String       @default("USD")
+  paymentTermsDays Int          @default(0)
+  createdAt        DateTime     @default(now())
+  vendorBills      VendorBill[]
+}
+
+model Partner {
+  id                 String          @id @default(cuid())
+  name               String          @unique
+  type               PartnerType
+  sharePercent       Decimal         @db.Decimal(10, 4)
+  payableAccountId   String?
+  payableAccount     LedgerAccount?  @relation("PartnerPayableAccount", fields: [payableAccountId], references: [id])
+  active             Boolean         @default(true)
+  settlementPeriods  SettlementPeriod[]
+}
+
+model SalesChannel {
+  id        String           @id @default(cuid())
+  code      String           @unique
+  name      String
+  type      SalesChannelType
+  active    Boolean          @default(true)
+  orders    SalesOrder[]
+}
+
+model SalesOrder {
+  id                String             @id @default(cuid())
+  orderNumber       String             @unique
+  sourceType        SalesOrderSource
+  salesChannelId    String
+  salesChannel      SalesChannel       @relation(fields: [salesChannelId], references: [id])
+  customerId        String?
+  customer          Customer?          @relation(fields: [customerId], references: [id])
+  status            OrderStatus        @default(CONFIRMED)
+  paymentState      PaymentState       @default(PENDING)
+  fulfillmentStatus FulfillmentStatus  @default(UNFULFILLED)
+  externalReference String?
+  currency          String             @default("USD")
+  orderDate         DateTime
+  subtotal          Decimal            @db.Decimal(14, 2)
+  discountTotal     Decimal            @default(0) @db.Decimal(14, 2)
+  refundTotal       Decimal            @default(0) @db.Decimal(14, 2)
+  shippingFee       Decimal            @default(0) @db.Decimal(14, 2)
+  deliveryCost      Decimal            @default(0) @db.Decimal(14, 2)
+  paymentFee        Decimal            @default(0) @db.Decimal(14, 2)
+  vatTotal          Decimal            @default(0) @db.Decimal(14, 2)
+  grossTotal        Decimal            @db.Decimal(14, 2)
+  netTotal          Decimal            @db.Decimal(14, 2)
+  notes             String?
+  createdById       String
+  createdBy         User               @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime           @default(now())
+  manualOrder       ManualOrder?
+  shopifyOrder      ShopifyOrder?
+  lines             OrderLine[]
+  fulfillments      Fulfillment[]
+  payments          Payment[]
+
+  @@index([orderDate, sourceType])
+  @@index([status, paymentState, fulfillmentStatus])
+}
+
+model ManualOrder {
+  id                   String      @id @default(cuid())
+  salesOrderId         String      @unique
+  salesOrder           SalesOrder  @relation(fields: [salesOrderId], references: [id])
+  sourceTag            String
+  instagramHandle      String?
+  requestedDeliveryFee Decimal?    @db.Decimal(14, 2)
+  notes                String?
+}
+
+model ShopifyOrder {
+  id           String             @id @default(cuid())
+  salesOrderId String             @unique
+  salesOrder   SalesOrder         @relation(fields: [salesOrderId], references: [id])
+  externalId   String             @unique
+  orderNumber  String             @unique
+  orderDate    DateTime
+  rawPayload   Json?
+  syncedAt     DateTime?
+  lines        ShopifyOrderLine[]
+}
+
+model OrderLine {
+  id               String          @id @default(cuid())
+  salesOrderId     String
+  salesOrder       SalesOrder      @relation(fields: [salesOrderId], references: [id])
+  productVariantId String
+  productVariant   ProductVariant  @relation(fields: [productVariantId], references: [id])
+  lineType         OrderLineType   @default(STANDARD)
+  description      String
+  quantity         Decimal         @db.Decimal(14, 2)
+  unitPrice        Decimal         @db.Decimal(14, 2)
+  discountTotal    Decimal         @default(0) @db.Decimal(14, 2)
+  lineTotal        Decimal         @db.Decimal(14, 2)
+  vatTotal         Decimal         @default(0) @db.Decimal(14, 2)
+  flavorMix        Json?
+  shopifyLine      ShopifyOrderLine?
+
+  @@index([salesOrderId])
+}
+
+model ShopifyOrderLine {
+  id               String         @id @default(cuid())
+  shopifyOrderId   String
+  shopifyOrder     ShopifyOrder   @relation(fields: [shopifyOrderId], references: [id])
+  orderLineId      String?        @unique
+  orderLine        OrderLine?     @relation(fields: [orderLineId], references: [id])
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  sku              String
+  title            String
+  quantity         Decimal        @db.Decimal(14, 2)
+  unitPrice        Decimal        @db.Decimal(14, 2)
+  discountTotal    Decimal        @default(0) @db.Decimal(14, 2)
+  netAmount        Decimal        @db.Decimal(14, 2)
+}
+
+model Fulfillment {
+  id                 String             @id @default(cuid())
+  salesOrderId       String
+  salesOrder         SalesOrder         @relation(fields: [salesOrderId], references: [id])
+  status             FulfillmentStatus  @default(UNFULFILLED)
+  shippedAt          DateTime?
+  deliveredAt        DateTime?
+  courierName        String?
+  trackingNumber     String?
+  actualDeliveryCost Decimal?           @db.Decimal(14, 2)
+}
+
+model LedgerAccount {
+  id                        String             @id @default(cuid())
+  code                      String             @unique
+  name                      String
+  type                      LedgerAccountType
+  subtype                   String?
+  isActive                  Boolean            @default(true)
+  allowManualPostings       Boolean            @default(true)
+  createdAt                 DateTime           @default(now())
+  journalLines              JournalEntryLine[]
+  paymentMethodDefaults     PaymentMethod[]    @relation("PaymentMethodClearingAccount")
+  expenseCategoryDefaults   ExpenseCategory[]  @relation("ExpenseCategoryDefaultAccount")
+  vendorBillLineAccounts    VendorBillLine[]   @relation("VendorBillLineAccount")
+  partnerPayables           Partner[]          @relation("PartnerPayableAccount")
+}
+
+model PaymentMethod {
+  id                String            @id @default(cuid())
+  code              PaymentMethodCode @unique
+  name              String
+  clearingAccountId String?
+  clearingAccount   LedgerAccount?    @relation("PaymentMethodClearingAccount", fields: [clearingAccountId], references: [id])
+  payments          Payment[]
+}
+
+model Payment {
+  id               String         @id @default(cuid())
+  salesOrderId     String?
+  salesOrder       SalesOrder?    @relation(fields: [salesOrderId], references: [id])
+  vendorBillId     String?
+  vendorBill       VendorBill?    @relation(fields: [vendorBillId], references: [id])
+  paymentMethodId  String
+  paymentMethod    PaymentMethod  @relation(fields: [paymentMethodId], references: [id])
+  status           PaymentStatus  @default(PENDING)
+  amount           Decimal        @db.Decimal(14, 2)
+  paidAt           DateTime?
+  externalReference String?
+  notes            String?
+
+  @@index([salesOrderId, status])
+  @@index([vendorBillId, status])
+}
+
+model ExpenseCategory {
+  id                    String               @id @default(cuid())
+  code                  String               @unique
+  name                  String
+  type                  ExpenseCategoryType
+  description           String?
+  defaultAccountId      String
+  defaultAccount        LedgerAccount        @relation("ExpenseCategoryDefaultAccount", fields: [defaultAccountId], references: [id])
+  includedInSettlement  Boolean              @default(false)
+  vendorBills           VendorBill[]
+}
+
+model VendorBill {
+  id                String            @id @default(cuid())
+  billNumber        String            @unique
+  vendorId          String
+  vendor            Vendor            @relation(fields: [vendorId], references: [id])
+  expenseCategoryId String
+  expenseCategory   ExpenseCategory   @relation(fields: [expenseCategoryId], references: [id])
+  issueDate         DateTime
+  dueDate           DateTime
+  status            VendorBillStatus  @default(DRAFT)
+  subtotal          Decimal           @db.Decimal(14, 2)
+  vatTotal          Decimal           @default(0) @db.Decimal(14, 2)
+  total             Decimal           @db.Decimal(14, 2)
+  notes             String?
+  createdById       String
+  createdBy         User              @relation("VendorBillCreatedBy", fields: [createdById], references: [id])
+  createdAt         DateTime          @default(now())
+  lines             VendorBillLine[]
+  payments          Payment[]
+
+  @@index([issueDate, status])
+}
+
+model VendorBillLine {
+  id           String         @id @default(cuid())
+  vendorBillId String
+  vendorBill   VendorBill     @relation(fields: [vendorBillId], references: [id])
+  description  String
+  quantity     Decimal        @db.Decimal(14, 2)
+  unitCost     Decimal        @db.Decimal(14, 2)
+  lineTotal    Decimal        @db.Decimal(14, 2)
+  accountId    String?
+  account      LedgerAccount? @relation("VendorBillLineAccount", fields: [accountId], references: [id])
+}
+
+model FiscalPeriod {
+  id         String             @id @default(cuid())
+  name       String             @unique
+  startDate  DateTime
+  endDate    DateTime
+  status     FiscalPeriodStatus @default(OPEN)
+  closedAt   DateTime?
+  closedById String?
+  closedBy   User?              @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
+  entries    JournalEntry[]
+}
+
+model JournalEntry {
+  id            String            @id @default(cuid())
+  entryNumber   String            @unique
+  entryDate     DateTime
+  status        JournalStatus     @default(DRAFT)
+  sourceType    JournalSourceType
+  sourceId      String
+  memo          String
+  fiscalPeriodId String?
+  fiscalPeriod  FiscalPeriod?     @relation(fields: [fiscalPeriodId], references: [id])
+  createdById   String
+  createdBy     User              @relation("JournalCreatedBy", fields: [createdById], references: [id])
+  postedAt      DateTime?
+  createdAt     DateTime          @default(now())
+  lines         JournalEntryLine[]
+
+  @@index([entryDate, status])
+  @@index([sourceType, sourceId])
+}
+
+model JournalEntryLine {
+  id            String       @id @default(cuid())
+  journalEntryId String
+  journalEntry  JournalEntry @relation(fields: [journalEntryId], references: [id])
+  accountId     String
+  account       LedgerAccount @relation(fields: [accountId], references: [id])
+  debit         Decimal      @default(0) @db.Decimal(14, 2)
+  credit        Decimal      @default(0) @db.Decimal(14, 2)
+  description   String?
+  entityType    String?
+  entityId      String?
+
+  @@index([accountId])
+}
+
+model SettlementConfig {
+  id                         String             @id @default(cuid())
+  effectiveFrom              DateTime
+  partnerSharePercent        Decimal            @db.Decimal(10, 4)
+  originsSharePercent        Decimal            @db.Decimal(10, 4)
+  includedExpenseCategoryIds Json
+  revenueAccountIds          Json
+  discountAccountIds         Json
+  refundAccountIds           Json
+  cogsAccountIds             Json
+  deliveryAccountIds         Json
+  paymentFeeAccountIds       Json
+  notes                      String?
+  active                     Boolean            @default(true)
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
+  periods                    SettlementPeriod[]
+}
+
+model SettlementPeriod {
+  id             String               @id @default(cuid())
+  periodKey      String
+  periodType     SettlementPeriodType
+  periodStart    DateTime
+  periodEnd      DateTime
+  version        Int
+  status         SettlementStatus     @default(FINALIZED)
+  configId       String
+  config         SettlementConfig     @relation(fields: [configId], references: [id])
+  partnerId      String?
+  partner        Partner?             @relation(fields: [partnerId], references: [id])
+  revenue        Decimal              @db.Decimal(14, 2)
+  discounts      Decimal              @db.Decimal(14, 2)
+  refunds        Decimal              @db.Decimal(14, 2)
+  netSales       Decimal              @db.Decimal(14, 2)
+  cogs           Decimal              @db.Decimal(14, 2)
+  deliveryCosts  Decimal              @db.Decimal(14, 2)
+  paymentFees    Decimal              @db.Decimal(14, 2)
+  includedOpex   Decimal              @db.Decimal(14, 2)
+  netProfit      Decimal              @db.Decimal(14, 2)
+  factoryShare   Decimal              @db.Decimal(14, 2)
+  originsShare   Decimal              @db.Decimal(14, 2)
+  adjustments    Decimal              @default(0) @db.Decimal(14, 2)
+  notes          String?
+  createdById    String
+  createdBy      User                 @relation("SettlementCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime             @default(now())
+  lines          SettlementLine[]
+
+  @@unique([periodKey, periodType, version])
+  @@index([periodStart, periodEnd])
+}
+
+model SettlementLine {
+  id                 String             @id @default(cuid())
+  settlementPeriodId String
+  settlementPeriod   SettlementPeriod   @relation(fields: [settlementPeriodId], references: [id])
+  lineType           SettlementLineType
+  label              String
+  amount             Decimal            @db.Decimal(14, 2)
+  referenceType      String?
+  referenceId        String?
+  metadata           Json?
+}
+
+model ReportSnapshot {
+  id             String    @id @default(cuid())
+  reportType     String
+  periodStart    DateTime
+  periodEnd      DateTime
+  payload        Json
+  generatedAt    DateTime  @default(now())
+  generatedById  String?
+  generatedBy    User?     @relation("ReportGeneratedBy", fields: [generatedById], references: [id])
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  actorId    String?
+  actor      User?     @relation("AuditActor", fields: [actorId], references: [id])
+  entityType String
+  entityId   String
+  action     String
+  before     Json?
+  after      Json?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}
+
+model FileReference {
+  id            String            @id @default(cuid())
+  storageKey    String
+  fileName      String
+  mimeType      String
+  byteSize      Int
+  checksum      String?
+  relatedType   FileReferenceType
+  relatedId     String
+  uploadedById  String?
+  uploadedBy    User?             @relation("FileUploadedBy", fields: [uploadedById], references: [id])
+  createdAt     DateTime          @default(now())
+
+  @@index([relatedType, relatedId])
+}
