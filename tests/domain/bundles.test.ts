@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { decomposeBundle } from "@/modules/catalog/domain/bundles";
 
 const DISCOVERY_LINES = [
-  { componentVariantId: "sku-choc", flavorId: "flavor-choc", quantity: 1 },
-  { componentVariantId: "sku-straw", flavorId: "flavor-straw", quantity: 1 },
-  { componentVariantId: "sku-van", flavorId: "flavor-van", quantity: 1 },
-  { componentVariantId: "sku-coffee", flavorId: "flavor-coffee", quantity: 1 },
+  { componentVariantId: "sku-choc", flavorId: "flavor-choc", quantity: 1, isFlexible: false },
+  { componentVariantId: "sku-straw", flavorId: "flavor-straw", quantity: 1, isFlexible: false },
+  { componentVariantId: "sku-van", flavorId: "flavor-van", quantity: 1, isFlexible: false },
+  { componentVariantId: "sku-coffee", flavorId: "flavor-coffee", quantity: 1, isFlexible: false },
 ];
 
 describe("bundle decomposition", () => {
@@ -37,8 +37,8 @@ describe("bundle decomposition", () => {
         type: "TRAINING_BOX",
         allowFlavorMix: false,
         lines: [
-          { componentVariantId: "sku-choc", flavorId: "flavor-choc", quantity: 4 },
-          { componentVariantId: "sku-van", flavorId: "flavor-van", quantity: 4 },
+          { componentVariantId: "sku-choc", flavorId: "flavor-choc", quantity: 4, isFlexible: false },
+          { componentVariantId: "sku-van", flavorId: "flavor-van", quantity: 4, isFlexible: false },
         ],
       },
       1,
@@ -55,8 +55,8 @@ describe("bundle decomposition", () => {
         type: "TRAINING_BOX",
         allowFlavorMix: false,
         lines: [
-          { componentVariantId: "sku-choc", flavorId: "flavor-choc", quantity: 4 },
-          { componentVariantId: "sku-van", flavorId: "flavor-van", quantity: 4 },
+          { componentVariantId: "sku-choc", flavorId: "flavor-choc", quantity: 4, isFlexible: false },
+          { componentVariantId: "sku-van", flavorId: "flavor-van", quantity: 4, isFlexible: false },
         ],
       },
       3,

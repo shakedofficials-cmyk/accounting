@@ -96,7 +96,7 @@ export async function importShopifyOrder(
         customerId: customer.id,
         status: "FULFILLED",
         paymentState: "PAID",
-        fulfillmentStatus: payload.fulfillment_status === "fulfilled" ? "FULFILLED" : "PENDING",
+        fulfillmentStatus: payload.fulfillment_status === "fulfilled" ? "FULFILLED" : "UNFULFILLED",
         orderDate: new Date(payload.created_at),
         subtotal,
         discountTotal,
@@ -123,7 +123,7 @@ export async function importShopifyOrder(
         },
         fulfillments: {
           create: {
-            status: payload.fulfillment_status === "fulfilled" ? "FULFILLED" : "PENDING",
+            status: payload.fulfillment_status === "fulfilled" ? "FULFILLED" : "UNFULFILLED",
             actualDeliveryCost: shippingFee,
           },
         },
