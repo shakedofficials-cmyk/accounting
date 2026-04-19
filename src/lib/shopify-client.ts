@@ -54,7 +54,7 @@ export async function shopifyAdminFetch<T>(path: string, options?: RequestInit):
   const token = await getShopifyAccessToken();
   const { storeDomain } = requireShopifyEnv();
 
-  const res = await fetch(`https://${storeDomain}/admin/api/2024-10/${path}`, {
+  const res = await fetch(`https://${storeDomain}/admin/api/2026-04/${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
