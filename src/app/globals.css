@@ -3,30 +3,31 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: "IBM Plex Sans", "Aptos", "Segoe UI", sans-serif;
-  --font-display: "Space Grotesk", "Aptos Display", "Trebuchet MS", sans-serif;
-  --background: 216 33% 97%;
-  --foreground: 216 47% 11%;
+  --font-sans: var(--font-sans), "IBM Plex Sans", sans-serif;
+  --font-display: var(--font-display), "Montserrat", sans-serif;
+
+  --background: 0 0% 100%;
+  --foreground: 220 20% 9%;
   --card: 0 0% 100%;
-  --card-foreground: 216 47% 11%;
+  --card-foreground: 220 20% 9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 216 47% 11%;
-  --primary: 169 68% 24%;
+  --popover-foreground: 220 20% 9%;
+  --primary: 194 86% 51%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 216 28% 92%;
-  --secondary-foreground: 216 34% 20%;
-  --muted: 216 25% 92%;
-  --muted-foreground: 216 14% 42%;
-  --accent: 33 92% 94%;
-  --accent-foreground: 24 47% 20%;
+  --secondary: 194 30% 94%;
+  --secondary-foreground: 220 20% 20%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 48%;
+  --accent: 194 60% 93%;
+  --accent-foreground: 194 80% 20%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 216 20% 84%;
-  --input: 216 20% 84%;
-  --ring: 169 68% 24%;
-  --radius: 0.9rem;
-  --chart-1: 169 68% 24%;
-  --chart-2: 28 75% 48%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 194 86% 51%;
+  --radius: 0.625rem;
+  --chart-1: 194 86% 51%;
+  --chart-2: 194 60% 35%;
   --chart-3: 347 65% 56%;
   --chart-4: 215 64% 38%;
   --chart-5: 42 88% 53%;
@@ -42,12 +43,9 @@ html {
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top right, rgba(13, 148, 136, 0.1), transparent 25%),
-    radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.12), transparent 22%),
-    hsl(var(--background));
+  background: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-sans), "IBM Plex Sans", sans-serif;
 }
 
 a {

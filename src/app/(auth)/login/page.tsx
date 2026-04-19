@@ -11,23 +11,26 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="grid w-full max-w-6xl gap-10 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[2rem] border border-border/60 bg-card/80 p-10 shadow-panel">
-          <p className="mb-3 text-sm uppercase tracking-[0.2em] text-primary">Origins s.a.r.l.</p>
-          <h1 className="max-w-2xl font-display text-4xl font-semibold leading-tight">
-            SHAKED Finance OS is built for operators who need inventory, accounting, and settlement truth in one place.
+    <main className="flex min-h-screen items-center justify-center bg-white px-4 py-12">
+      <div className="grid w-full max-w-5xl gap-12 lg:grid-cols-[1fr_420px]">
+        <div className="flex flex-col justify-center">
+          <div className="h-1 w-10 rounded bg-primary" />
+          <h1 className="mt-5 font-display text-4xl font-bold leading-tight tracking-tight">
+            SHAKED<br />Finance OS
           </h1>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
+            Inventory, accounting, and settlement in one place — built for operators who need the truth fast.
+          </p>
+          <div className="mt-10 grid gap-3 sm:grid-cols-2">
             {[
-              ["Double-entry ready", "Every order, expense, and settlement is traceable back to posted entries."],
-              ["Lot-aware stock", "Finished sachets, expiry, and sellable stock all move through controlled locations."],
-              ["Factory settlement", "Profit sharing is configurable and versioned for partner-ready statements."],
-              ["Internal speed", "Dense tables, focused workflows, and operator-first summaries across the stack."],
-            ].map(([title, description]) => (
-              <div key={title} className="rounded-2xl border border-border/60 bg-background/80 p-5">
-                <h2 className="font-medium">{title}</h2>
-                <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+              ["Double-entry accounting", "Every order, expense, and settlement posts traceable journal entries."],
+              ["Lot-aware inventory", "FEFO stock deduction, expiry tracking, and controlled locations."],
+              ["Factory settlement", "Configurable profit sharing with versioned partner statements."],
+              ["Full export suite", "P&L, trial balance, stock, and settlement CSVs on demand."],
+            ].map(([title, desc]) => (
+              <div key={title} className="rounded-lg border border-border/70 p-4">
+                <p className="text-sm font-semibold">{title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
               </div>
             ))}
           </div>
