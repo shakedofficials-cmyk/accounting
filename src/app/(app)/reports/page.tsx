@@ -33,7 +33,7 @@ export default async function ReportsPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.2em] text-primary">Reports</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold">Exports and reproducible snapshots</h1>
+        <h1 className="mt-2 font-display text-3xl font-bold">Exports and reproducible snapshots</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Every export is derived from posted journals, recorded orders, and append-only inventory state.
         </p>

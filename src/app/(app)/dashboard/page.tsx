@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.2em] text-primary">Dashboard</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold">Operator overview</h1>
+        <h1 className="mt-2 font-display text-3xl font-bold">Operator overview</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
           Today’s commercial pulse, inventory pressure, and partner-sharing signals in one place.
         </p>
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
             <CardContent className="flex items-start justify-between gap-4 p-5">
               <div>
                 <p className="text-sm text-muted-foreground">{label}</p>
-                <p className="mt-3 font-display text-3xl font-semibold">
+                <p className="mt-3 font-display text-3xl font-bold">
                   {formatMoney(metrics[key])}
                 </p>
               </div>

@@ -11,7 +11,7 @@ export default async function ProductsPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.2em] text-primary">Products</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold">Flavors, bundles, and BOM structure</h1>
+        <h1 className="mt-2 font-display text-3xl font-bold">Flavors, bundles, and BOM structure</h1>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-4">

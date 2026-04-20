@@ -12,7 +12,7 @@ export default async function AuditLogPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.2em] text-primary">Audit Log</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold">Sensitive action history</h1>
+        <h1 className="mt-2 font-display text-3xl font-bold">Sensitive action history</h1>
       </div>
 
       <Card>

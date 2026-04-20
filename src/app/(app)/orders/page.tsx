@@ -40,7 +40,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.2em] text-primary">Orders</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold">Manual order console</h1>
+        <h1 className="mt-2 font-display text-3xl font-bold">Manual order console</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Create direct orders with real stock deduction, payment handling, and journal postings.
         </p>
