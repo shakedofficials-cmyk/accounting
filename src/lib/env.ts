@@ -6,11 +6,15 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(1),
   APP_URL: z.string().url().default("http://localhost:3000"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  // Shopify custom app credentials (optional — only required when webhook integration is active)
-  SHOPIFY_STORE_DOMAIN: z.string().optional(),           // shaked-6240.myshopify.com
+  SEED_INCLUDE_DEMO: z
+    .string()
+    .optional()
+    .transform((value) => value === "1"),
+  SHOPIFY_STORE_DOMAIN: z.string().optional(),
   SHOPIFY_CLIENT_ID: z.string().optional(),
   SHOPIFY_CLIENT_SECRET: z.string().optional(),
-  SHOPIFY_ACCESS_TOKEN: z.string().optional(),           // shpat_xxx — permanent token from "Install app"
+  SHOPIFY_ACCESS_TOKEN: z.string().optional(),
+  SHOPIFY_API_VERSION: z.string().default("2026-04"),
   SHOPIFY_PAYMENT_FEE_RATE: z.coerce.number().min(0).max(1).default(0.024),
 });
 
@@ -27,25 +31,55 @@ export function getEnv() {
     SESSION_SECRET: process.env.SESSION_SECRET,
     APP_URL: process.env.APP_URL ?? "http://localhost:3000",
     NODE_ENV: process.env.NODE_ENV ?? "development",
+    SEED_INCLUDE_DEMO: process.env.SEED_INCLUDE_DEMO,
     SHOPIFY_STORE_DOMAIN: process.env.SHOPIFY_STORE_DOMAIN,
     SHOPIFY_CLIENT_ID: process.env.SHOPIFY_CLIENT_ID,
     SHOPIFY_CLIENT_SECRET: process.env.SHOPIFY_CLIENT_SECRET,
     SHOPIFY_ACCESS_TOKEN: process.env.SHOPIFY_ACCESS_TOKEN,
+    SHOPIFY_API_VERSION: process.env.SHOPIFY_API_VERSION ?? "2026-04",
     SHOPIFY_PAYMENT_FEE_RATE: process.env.SHOPIFY_PAYMENT_FEE_RATE,
   });
 
   return cachedEnv;
 }
 
+export function hasShopifyConnectionEnv() {
+  const env = getEnv();
+
+  if (!env.SHOPIFY_STORE_DOMAIN) {
+    return false;
+  }
+
+  return Boolean(
+    env.SHOPIFY_ACCESS_TOKEN ||
+      (env.SHOPIFY_CLIENT_ID && env.SHOPIFY_CLIENT_SECRET),
+  );
+}
+
 export function requireShopifyEnv() {
   const env = getEnv();
-  if (!env.SHOPIFY_STORE_DOMAIN || !env.SHOPIFY_CLIENT_ID || !env.SHOPIFY_CLIENT_SECRET) {
-    throw new Error("SHOPIFY_STORE_DOMAIN, SHOPIFY_CLIENT_ID, and SHOPIFY_CLIENT_SECRET must be set.");
+
+  if (!env.SHOPIFY_STORE_DOMAIN) {
+    throw new Error("SHOPIFY_STORE_DOMAIN must be set.");
   }
+
+  const canUsePermanentToken = Boolean(env.SHOPIFY_ACCESS_TOKEN);
+  const canExchangeShortLivedToken = Boolean(
+    env.SHOPIFY_CLIENT_ID && env.SHOPIFY_CLIENT_SECRET,
+  );
+
+  if (!canUsePermanentToken && !canExchangeShortLivedToken) {
+    throw new Error(
+      "Set SHOPIFY_ACCESS_TOKEN or provide both SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET.",
+    );
+  }
+
   return {
     storeDomain: env.SHOPIFY_STORE_DOMAIN,
     clientId: env.SHOPIFY_CLIENT_ID,
     clientSecret: env.SHOPIFY_CLIENT_SECRET,
+    accessToken: env.SHOPIFY_ACCESS_TOKEN,
+    apiVersion: env.SHOPIFY_API_VERSION,
     paymentFeeRate: env.SHOPIFY_PAYMENT_FEE_RATE,
   };
 }

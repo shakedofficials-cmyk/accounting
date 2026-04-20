@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import { getActionErrorMessage } from "@/lib/errors";
+import { clearOperationalData } from "@/modules/settings/server/operational-reset.service";
 import { replaceSettlementConfig, updateCompanyProfile } from "@/modules/settings/server/settings.service";
 
 const companySettingsSchema = z.object({
@@ -23,6 +24,15 @@ const settlementConfigSchema = z.object({
     .min(0, "Factory share must be at least 0.")
     .max(1, "Factory share must be 1 or less."),
   includedExpenseCategoryIds: z.array(z.string()),
+});
+
+const operationalResetSchema = z.object({
+  confirmation: z
+    .string()
+    .trim()
+    .refine((value) => value === "RESET LIVE DATA", {
+      message: 'Type "RESET LIVE DATA" to confirm.',
+    }),
 });
 
 export async function updateCompanyProfileAction(formData: FormData) {
@@ -69,6 +79,25 @@ export async function updateSettlementConfigAction(formData: FormData) {
     });
   } catch (error) {
     redirectUrl = `/settings?error=${encodeURIComponent(getActionErrorMessage(error, "Unable to save settlement configuration."))}`;
+  }
+
+  redirect(redirectUrl);
+}
+
+export async function clearOperationalDataAction(formData: FormData) {
+  const user = await requireUser("settings:manage");
+  let redirectUrl: Parameters<typeof redirect>[0] = "/settings?operationalReset=1";
+
+  try {
+    operationalResetSchema.parse({
+      confirmation: String(formData.get("confirmation") ?? ""),
+    });
+
+    await clearOperationalData(user.id);
+  } catch (error) {
+    redirectUrl = `/settings?error=${encodeURIComponent(
+      getActionErrorMessage(error, "Unable to clear operational data."),
+    )}`;
   }
 
   redirect(redirectUrl);

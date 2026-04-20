@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { detectLowStock, detectUpcomingExpiry } from "@/modules/inventory/domain/movements";
 
 export async function getInventoryOverview() {
-  const [lots, balances, locations] = await Promise.all([
+  const [lots, balances, locations, trackedVariants] = await Promise.all([
     db.inventoryLot.findMany({
       include: {
         productVariant: {
@@ -26,6 +26,17 @@ export async function getInventoryOverview() {
     }),
     db.location.findMany({
       orderBy: { name: "asc" },
+    }),
+    db.productVariant.findMany({
+      where: {
+        active: true,
+        tracksInventory: true,
+      },
+      include: {
+        product: true,
+        flavor: true,
+      },
+      orderBy: [{ variantType: "asc" }, { name: "asc" }],
     }),
   ]);
 
@@ -51,6 +62,7 @@ export async function getInventoryOverview() {
     lots,
     balances,
     locations,
+    trackedVariants,
     lowStockAlerts: detectLowStock(stockByVariant),
     upcomingExpiries: detectUpcomingExpiry(
       lots

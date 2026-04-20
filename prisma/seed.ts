@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { addDays, endOfMonth, startOfMonth } from "date-fns";
 import { hash } from "bcryptjs";
 import {
@@ -76,6 +78,7 @@ async function main() {
   `);
 
   const sessionPassword = process.env.DEFAULT_USER_PASSWORD ?? "ChangeMe123!";
+  const includeDemoData = process.env.SEED_INCLUDE_DEMO === "1";
   const founderHash = await hash(sessionPassword, 12);
   const operatorHash = await hash(sessionPassword, 12);
 
@@ -190,6 +193,7 @@ async function main() {
       ["2140", "Factory Profit Share Payable", "LIABILITY"],
       ["3100", "Share Capital", "EQUITY"],
       ["3200", "Retained Earnings", "EQUITY"],
+      ["3300", "Opening Balance Equity", "EQUITY"],
       ["4100", "Shopify Sales", "REVENUE"],
       ["4110", "Manual Sales", "REVENUE"],
       ["4120", "Wholesale Sales", "REVENUE"],
@@ -672,6 +676,24 @@ async function main() {
     },
   });
 
+  const settlementConfig = await prisma.settlementConfig.create({
+    data: {
+      effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
+      partnerSharePercent: dec(0.6),
+      originsSharePercent: dec(0.4),
+      includedExpenseCategoryIds: [categoryByCode["SOFTWARE"].id, categoryByCode["PROFESSIONAL"].id, categoryByCode["ADMIN"].id],
+      revenueAccountIds: [accountByCode["4100"].id, accountByCode["4110"].id, accountByCode["4120"].id],
+      discountAccountIds: [accountByCode["4190"].id],
+      refundAccountIds: [accountByCode["4195"].id],
+      cogsAccountIds: [accountByCode["5100"].id],
+      deliveryAccountIds: [accountByCode["5110"].id],
+      paymentFeeAccountIds: [accountByCode["5120"].id],
+      notes: "Default settlement configuration for SHAKED live operations.",
+      active: true,
+    },
+  });
+
+  if (includeDemoData) {
   const rawLots = await Promise.all(
     [
       { lotCode: "LOT-RM-PROTEIN-001", productVariantId: rawVariantByCode["RM-PROTEIN"].id, quantityOnHand: 85, locationCode: "FACTORY-RAW" },
@@ -1067,7 +1089,7 @@ async function main() {
       {
         salesOrderId: shopifyOrder.id,
         paymentMethodId: paymentMethodByCode["CARD"].id,
-        status: "PAID",
+        status: "PAID" as const,
         amount: dec(12.2),
         paidAt: new Date("2026-04-12T09:00:00.000Z"),
         externalReference: "shopify-capture-1001",
@@ -1075,7 +1097,7 @@ async function main() {
       {
         salesOrderId: manualCustomOrder.id,
         paymentMethodId: paymentMethodByCode["CASH"].id,
-        status: "PAID",
+        status: "PAID" as const,
         amount: dec(19.98),
         paidAt: new Date("2026-04-15T19:00:00.000Z"),
       },
@@ -1469,23 +1491,6 @@ async function main() {
     });
   }
 
-  const settlementConfig = await prisma.settlementConfig.create({
-    data: {
-      effectiveFrom: new Date("2026-01-01T00:00:00.000Z"),
-      partnerSharePercent: dec(0.6),
-      originsSharePercent: dec(0.4),
-      includedExpenseCategoryIds: [categoryByCode["SOFTWARE"].id, categoryByCode["PROFESSIONAL"].id, categoryByCode["ADMIN"].id],
-      revenueAccountIds: [accountByCode["4100"].id, accountByCode["4110"].id, accountByCode["4120"].id],
-      discountAccountIds: [accountByCode["4190"].id],
-      refundAccountIds: [accountByCode["4195"].id],
-      cogsAccountIds: [accountByCode["5100"].id],
-      deliveryAccountIds: [accountByCode["5110"].id],
-      paymentFeeAccountIds: [accountByCode["5120"].id],
-      notes: "April configuration includes software and professional fees in shared profit.",
-      active: true,
-    },
-  });
-
   const settlementMath = calculateSettlement({
     revenue: 59.98,
     discounts: 2,
@@ -1609,10 +1614,16 @@ async function main() {
     ],
   });
 
-  console.log("Seed completed.");
+  }
+
+  console.log(`Seed completed${includeDemoData ? " with demo operational data." : " with master data only."}`);
 }
 
-function accountLine(account: { id: string; code: string; name: string; type: string }, debit: number, credit: number) {
+function accountLine(
+  account: { id: string; code: string; name: string; type: LedgerAccountType },
+  debit: number,
+  credit: number,
+) {
   return {
     accountId: account.id,
     code: account.code,

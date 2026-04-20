@@ -5,9 +5,12 @@ import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
-import { formatMoney, getQueryValue } from "@/lib/utils";
+import { formatDateTime, formatMoney, getQueryValue } from "@/lib/utils";
 import { getOrdersOverview } from "@/modules/orders/server/orders.service";
-import { createManualOrderAction } from "@/app/(app)/orders/actions";
+import {
+  createManualOrderAction,
+  syncShopifyOrdersAction,
+} from "@/app/(app)/orders/actions";
 import { OrdersTable } from "@/app/(app)/orders/orders-table";
 
 type OrdersPageProps = {
@@ -16,10 +19,22 @@ type OrdersPageProps = {
 
 export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   await requireUser("orders:view");
+
   const params = (await searchParams) ?? {};
-  const { orders, bundleVariants, paymentMethods } = await getOrdersOverview();
+  const {
+    orders,
+    bundleVariants,
+    paymentMethods,
+    shopifyConfigured,
+    lastShopifySyncAt,
+    shopifyOrderCount,
+  } = await getOrdersOverview();
+
   const created = getQueryValue(params.created) === "1";
   const error = getQueryValue(params.error);
+  const shopifySync = getQueryValue(params.shopifySync) === "1";
+  const shopifyImported = Number(getQueryValue(params.shopifyImported) ?? 0);
+  const shopifySkipped = Number(getQueryValue(params.shopifySkipped) ?? 0);
 
   return (
     <div className="space-y-6">
@@ -33,13 +48,20 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
 
       {error ? <Notice variant="error">{error}</Notice> : null}
       {created ? <Notice variant="success">Manual order posted successfully.</Notice> : null}
+      {shopifySync ? (
+        <Notice variant="success">
+          Shopify sync finished. Imported {shopifyImported} orders and skipped {shopifySkipped} that
+          were already in the system.
+        </Notice>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <Card>
           <CardHeader>
             <CardTitle>Create manual order</CardTitle>
             <CardDescription>
-              Discovery packs can ignore flavor quantities. Training, monthly, and custom orders should specify a flavor mix.
+              Discovery packs can ignore flavor quantities. Training, monthly, and custom orders
+              should specify a flavor mix.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -61,7 +83,12 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sourceTag">Source tag</Label>
-                  <Input id="sourceTag" name="sourceTag" placeholder="WhatsApp / Instagram / Direct" defaultValue="WhatsApp" />
+                  <Input
+                    id="sourceTag"
+                    name="sourceTag"
+                    placeholder="WhatsApp / Instagram / Direct"
+                    defaultValue="WhatsApp"
+                  />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -82,7 +109,13 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bundleQuantity">Bundle quantity</Label>
-                  <Input id="bundleQuantity" name="bundleQuantity" type="number" min={1} defaultValue={1} />
+                  <Input
+                    id="bundleQuantity"
+                    name="bundleQuantity"
+                    type="number"
+                    min={1}
+                    defaultValue={1}
+                  />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -129,63 +162,129 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 px-4 py-3">
-                <input id="markAsPaid" name="markAsPaid" type="checkbox" className="h-4 w-4 rounded border-border" />
+                <input
+                  id="markAsPaid"
+                  name="markAsPaid"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                />
                 <Label htmlFor="markAsPaid">Mark order as paid now</Label>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" placeholder="Courier notes, COD details, or source context." />
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  placeholder="Courier notes, COD details, or source context."
+                />
               </div>
               <Button type="submit">Create and post order</Button>
             </form>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent orders</CardTitle>
-            <CardDescription>Read-only order feed from both manual and Shopify channels.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-border/70 bg-background/70 p-4">
-                <p className="text-sm text-muted-foreground">Orders</p>
-                <p className="mt-2 text-2xl font-semibold">{orders.length}</p>
+        <div className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shopify sync</CardTitle>
+              <CardDescription>
+                Backfill paid Shopify orders into the internal ledger and stock movement history.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <p className="text-sm text-muted-foreground">Connection</p>
+                  <p className="mt-2 text-lg font-semibold">
+                    {shopifyConfigured ? "Configured" : "Missing env"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <p className="text-sm text-muted-foreground">Imported Shopify orders</p>
+                  <p className="mt-2 text-lg font-semibold">{shopifyOrderCount}</p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <p className="text-sm text-muted-foreground">Last sync</p>
+                  <p className="mt-2 text-sm font-semibold">
+                    {lastShopifySyncAt ? formatDateTime(lastShopifySyncAt) : "Never"}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl border border-border/70 bg-background/70 p-4">
-                <p className="text-sm text-muted-foreground">Paid revenue</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {formatMoney(
-                    orders
-                      .filter((order) => order.paymentState === "PAID")
-                      .reduce((sum, order) => sum + Number(order.subtotal), 0),
-                  )}
-                </p>
+
+              {!shopifyConfigured ? (
+                <Notice>
+                  Add Shopify credentials to <code>.env</code> first, then use this panel to import
+                  real orders instead of relying on sample rows.
+                </Notice>
+              ) : null}
+
+              <form action={syncShopifyOrdersAction} className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+                <div className="space-y-2">
+                  <Label htmlFor="daysBack">Days back</Label>
+                  <Input id="daysBack" name="daysBack" type="number" min={1} max={365} defaultValue={60} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="limit">Order limit</Label>
+                  <Input id="limit" name="limit" type="number" min={1} max={1000} defaultValue={100} />
+                </div>
+                <div className="flex items-end">
+                  <Button type="submit" disabled={!shopifyConfigured} className="w-full">
+                    Sync Shopify orders
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent orders</CardTitle>
+              <CardDescription>
+                Read-only order feed from both manual and Shopify channels.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <p className="text-sm text-muted-foreground">Orders</p>
+                  <p className="mt-2 text-2xl font-semibold">{orders.length}</p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <p className="text-sm text-muted-foreground">Paid revenue</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {formatMoney(
+                      orders
+                        .filter((order) => order.paymentState === "PAID")
+                        .reduce((sum, order) => sum + Number(order.subtotal), 0),
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <p className="text-sm text-muted-foreground">Pending collection</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {formatMoney(
+                      orders
+                        .filter((order) => order.paymentState !== "PAID")
+                        .reduce((sum, order) => sum + Number(order.netTotal), 0),
+                    )}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl border border-border/70 bg-background/70 p-4">
-                <p className="text-sm text-muted-foreground">Pending collection</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {formatMoney(
-                    orders
-                      .filter((order) => order.paymentState !== "PAID")
-                      .reduce((sum, order) => sum + Number(order.netTotal), 0),
-                  )}
-                </p>
-              </div>
-            </div>
-            <OrdersTable
-              data={orders.map((order) => ({
-                orderNumber: order.orderNumber,
-                customer: order.customer?.name ?? "Guest",
-                source: order.salesChannel.name,
-                status: order.status,
-                paymentState: order.paymentState,
-                subtotal: Number(order.subtotal),
-                orderDate: order.orderDate.toISOString(),
-              }))}
-            />
-          </CardContent>
-        </Card>
+
+              <OrdersTable
+                data={orders.map((order) => ({
+                  orderNumber: order.orderNumber,
+                  customer: order.customer?.name ?? "Guest",
+                  source: order.salesChannel.name,
+                  status: order.status,
+                  paymentState: order.paymentState,
+                  subtotal: Number(order.subtotal),
+                  orderDate: order.orderDate.toISOString(),
+                }))}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

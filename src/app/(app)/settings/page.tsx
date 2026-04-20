@@ -7,7 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { requireUser } from "@/lib/auth/session";
 import { getQueryValue } from "@/lib/utils";
 import { getSettingsOverview } from "@/modules/settings/server/settings.service";
-import { updateCompanyProfileAction, updateSettlementConfigAction } from "@/app/(app)/settings/actions";
+import {
+  clearOperationalDataAction,
+  updateCompanyProfileAction,
+  updateSettlementConfigAction,
+} from "@/app/(app)/settings/actions";
 
 type SettingsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -22,6 +26,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const error = getQueryValue(params.error);
   const companyUpdated = getQueryValue(params.companyUpdated) === "1";
   const settlementUpdated = getQueryValue(params.settlementUpdated) === "1";
+  const operationalReset = getQueryValue(params.operationalReset) === "1";
 
   return (
     <div className="space-y-6">
@@ -33,6 +38,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       {error ? <Notice variant="error">{error}</Notice> : null}
       {companyUpdated ? <Notice variant="success">Company settings were updated and audited.</Notice> : null}
       {settlementUpdated ? <Notice variant="success">Settlement inclusion policy was versioned successfully.</Notice> : null}
+      {operationalReset ? (
+        <Notice variant="success">
+          Demo operational data was cleared. The system is ready for real inventory, orders, expenses,
+          and settlement runs.
+        </Notice>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <Card>
@@ -139,6 +150,36 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Operational reset</CardTitle>
+          <CardDescription>
+            Clears demo transactions while keeping your company setup, catalog, BOMs, chart of
+            accounts, warehouses, locations, and settlement policy.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={clearOperationalDataAction} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-3 rounded-xl border border-border/70 bg-background/70 p-4">
+              <p className="text-sm text-muted-foreground">
+                This removes inventory lots, movements, production runs, orders, vendor bills,
+                journal entries, settlements, snapshots, and demo attachments. It leaves the static
+                operating structure in place so you can start from a clean live baseline.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="confirmation">Type RESET LIVE DATA to confirm</Label>
+                <Input id="confirmation" name="confirmation" placeholder="RESET LIVE DATA" />
+              </div>
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" variant="destructive" className="w-full">
+                Clear demo operational data
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

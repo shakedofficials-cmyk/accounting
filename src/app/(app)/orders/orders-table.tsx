@@ -67,13 +67,23 @@ export function OrdersTable({ data }: { data: OrderRow[] }) {
           ))}
         </TableHead>
         <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <Td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</Td>
-              ))}
+          {table.getRowModel().rows.length === 0 ? (
+            <tr>
+              <Td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
+                No orders yet. Sync Shopify or create the first manual order.
+              </Td>
             </tr>
-          ))}
+          ) : (
+            table.getRowModel().rows.map((row) => (
+              <tr key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <Td key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </Td>
+                ))}
+              </tr>
+            ))
+          )}
         </TableBody>
       </Table>
     </TableWrapper>

@@ -2,28 +2,23 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 import { requireShopifyEnv } from "@/lib/env";
 
-// ---------------------------------------------------------------------------
-// Token management
-//
-// Custom Shopify apps (Settings > Apps > Develop apps) issue a permanent
-// Admin API token (shpat_xxx). Partner apps can use client_credentials.
-// We prefer the permanent token (SHOPIFY_ACCESS_TOKEN) and fall back to
-// the client_credentials flow if only client_id/secret are provided.
-// ---------------------------------------------------------------------------
-
 type TokenCache = { token: string; expiresAt: number };
+
 let tokenCache: TokenCache | null = null;
 
 export async function getShopifyAccessToken(): Promise<string> {
-  const { storeDomain, clientId, clientSecret } = requireShopifyEnv();
-  const permanentToken = process.env.SHOPIFY_ACCESS_TOKEN;
+  const { accessToken, clientId, clientSecret, storeDomain } = requireShopifyEnv();
 
-  // Prefer permanent token (no expiry management needed)
-  if (permanentToken) {
-    return permanentToken;
+  if (accessToken) {
+    return accessToken;
   }
 
-  // Fall back to client_credentials flow (24h token, auto-refresh)
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET are required when SHOPIFY_ACCESS_TOKEN is not set.",
+    );
+  }
+
   if (tokenCache && Date.now() < tokenCache.expiresAt - 60_000) {
     return tokenCache.token;
   }
@@ -47,14 +42,18 @@ export async function getShopifyAccessToken(): Promise<string> {
     token: data.access_token,
     expiresAt: Date.now() + (data.expires_in ?? 82_800) * 1000,
   };
+
   return tokenCache.token;
 }
 
-export async function shopifyAdminFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function shopifyAdminRequest(
+  path: string,
+  options?: RequestInit,
+): Promise<Response> {
   const token = await getShopifyAccessToken();
-  const { storeDomain } = requireShopifyEnv();
+  const { apiVersion, storeDomain } = requireShopifyEnv();
 
-  const res = await fetch(`https://${storeDomain}/admin/api/2026-04/${path}`, {
+  return fetch(`https://${storeDomain}/admin/api/${apiVersion}/${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -62,6 +61,13 @@ export async function shopifyAdminFetch<T>(path: string, options?: RequestInit):
       ...options?.headers,
     },
   });
+}
+
+export async function shopifyAdminFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
+  const res = await shopifyAdminRequest(path, options);
 
   if (!res.ok) {
     throw new Error(`Shopify API error ${res.status}: ${await res.text()}`);
@@ -70,12 +76,20 @@ export async function shopifyAdminFetch<T>(path: string, options?: RequestInit):
   return res.json() as Promise<T>;
 }
 
-// Shopify signs webhook payloads with HMAC-SHA256 using the client_secret
 export function verifyShopifyWebhook(rawBody: string, hmacHeader: string | null): boolean {
-  if (!hmacHeader) return false;
+  if (!hmacHeader) {
+    return false;
+  }
 
   const { clientSecret } = requireShopifyEnv();
-  const digest = createHmac("sha256", clientSecret).update(rawBody, "utf8").digest("base64");
+
+  if (!clientSecret) {
+    return false;
+  }
+
+  const digest = createHmac("sha256", clientSecret)
+    .update(rawBody, "utf8")
+    .digest("base64");
 
   try {
     return timingSafeEqual(Buffer.from(digest), Buffer.from(hmacHeader));

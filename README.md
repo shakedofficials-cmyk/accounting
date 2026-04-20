@@ -20,15 +20,22 @@ Production-minded internal ERP and finance console for SHAKED / Origins s.a.r.l.
   - `Settings`
   - `Audit Log`
 - Settings flow for editable company defaults and versioned settlement configuration
+- Safe operational reset flow to clear demo transactions while preserving master data
 - Manual order posting flow with:
   - bundle/custom flavor decomposition
   - FEFO stock deduction from sellable lots
   - payment capture state
   - double-entry journal posting
   - audit logging
+- Inventory opening-balance flow with:
+  - lot creation
+  - quantity and cost loading
+  - QC status and expiry capture
+  - posted inventory valuation entries against opening balance equity
 - Settlement rerun flow with immutable versioning
+- Shopify backfill action for paid orders once credentials are configured
 - CSV exports for sales by SKU, stock on hand, expiry, inventory movement ledger, P&L, trial balance, and settlement statements
-- Seed script with realistic SHAKED demo data
+- Seed scripts for both clean live master data and optional demo transactions
 - Domain tests for the core calculation-heavy services
 
 ## Stack
@@ -75,10 +82,18 @@ npm run db:generate
 npx prisma migrate deploy
 ```
 
-6. Seed demo data:
+6. Seed master data:
 
 ```bash
 npm run db:seed
+```
+
+This now creates a clean live baseline by default: company, users, catalog, BOMs, warehouses, chart of accounts, payment methods, vendors, and settlement config, but no fake orders, inventory, bills, or settlements.
+
+If you explicitly want the old sample activity as a sandbox:
+
+```bash
+npm run db:seed:demo
 ```
 
 7. Start the app:
@@ -98,7 +113,30 @@ Useful commands:
 ```bash
 npm run db:portable:start
 npm run db:portable:stop
+npm run db:reset:operational
 ```
+
+## Replacing demo data with live values
+
+1. Open `Settings` and use `Operational reset` if your current database still has fake orders, inventory, bills, or settlements.
+2. Open `Inventory` and load your real opening lots, quantities, unit costs, QC status, and expiry dates.
+3. Open `Orders` and create direct orders manually for WhatsApp / Instagram / direct-entry sales.
+4. Add Shopify credentials to `.env`, then use the `Shopify sync` card on the `Orders` page to backfill paid Shopify orders.
+
+Required Shopify envs for backfill:
+
+```env
+SHOPIFY_STORE_DOMAIN="your-store.myshopify.com"
+SHOPIFY_ACCESS_TOKEN=""
+SHOPIFY_CLIENT_ID=""
+SHOPIFY_CLIENT_SECRET=""
+SHOPIFY_API_VERSION="2026-04"
+SHOPIFY_PAYMENT_FEE_RATE="0.024"
+```
+
+Use either:
+- `SHOPIFY_ACCESS_TOKEN` for a permanent Admin API token, or
+- `SHOPIFY_CLIENT_ID` + `SHOPIFY_CLIENT_SECRET` for token exchange and webhook validation
 
 ## Seeded login users
 

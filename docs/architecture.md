@@ -30,6 +30,11 @@
 - Lot/expiry/QC status on `InventoryLot`
 - Multi-location from day one
 - Sellable deductions happen from released lots only
+- Opening inventory loads create:
+  - lot records
+  - opening balances
+  - receipt movements
+  - posted valuation journal entries against `3300 Opening Balance Equity`
 
 ### Production
 
@@ -42,6 +47,9 @@
 - `SalesOrder` is the normalized commercial order
 - `ManualOrder` and `ShopifyOrder` are source-specific extensions
 - Order lines support flavor mix JSON for custom/flexible bundles
+- Shopify has two ingestion paths:
+  - webhook import on `POST /api/webhooks/shopify`
+  - manual paid-order backfill from the Orders screen
 - Manual order service posts:
   - order + lines
   - fulfillment record
@@ -74,6 +82,7 @@
 - Reporting exports are server-side and derived from ledger or inventory state, not UI calculations
 - Current CSV routes cover sales, stock, expiry, inventory movements, P&L, trial balance, and settlement statements
 - Company defaults are editable from settings and changes are audited
+- Settings now include an operational reset that removes demo transactions while preserving master data
 
 ## Folder layout
 
@@ -92,19 +101,22 @@
 - Dashboard with KPIs, stock alerts, expiries, and recent activity
 - Manual order entry with real stock/journal posting
 - Inventory lot and location overview
+- Opening inventory entry workflow with accounting impact
 - Product / bundle / BOM visibility
 - Production run overview
 - Expense and vendor bill overview
 - Accounting trial balance and P&L
 - Settlement history + rerun
 - Company settings + settlement config admin surfaces
+- Operational reset flow for clearing seeded transactions
+- Shopify paid-order backfill flow
 - Expanded CSV export routes for operations and finance
 
 ## Next recommended build-out
 
-1. Shopify Admin API sync jobs and webhook ingestion
-2. Vendor bill create/edit/post workflow
-3. Stronger fulfillment states and reservation vs deduction separation
-4. Period close workflow and balance sheet / cash flow reports
-5. Attachment upload endpoints and local storage abstraction
-6. PDF/print settlement statements
+1. Vendor bill create/edit/post workflow
+2. Stronger fulfillment states and reservation vs deduction separation
+3. Period close workflow and balance sheet / cash flow reports
+4. Attachment upload endpoints and local storage abstraction
+5. PDF/print settlement statements
+6. Broader Shopify sync coverage for refunds, fulfillments, and inventory adjustments

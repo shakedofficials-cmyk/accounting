@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { getActionErrorMessage } from "@/lib/errors";
 import { createManualOrder } from "@/modules/orders/server/orders.service";
+import { syncRecentShopifyOrders } from "@/modules/orders/server/shopify-sync.service";
 
 export async function createManualOrderAction(formData: FormData) {
   const user = await requireUser("orders:manage");
@@ -36,6 +37,27 @@ export async function createManualOrderAction(formData: FormData) {
     );
   } catch (error) {
     redirectUrl = `/orders?error=${encodeURIComponent(getActionErrorMessage(error, "Unable to create order."))}`;
+  }
+
+  redirect(redirectUrl);
+}
+
+export async function syncShopifyOrdersAction(formData: FormData) {
+  const user = await requireUser("orders:manage");
+  let redirectUrl: Parameters<typeof redirect>[0] = "/orders?shopifySync=1";
+
+  try {
+    const result = await syncRecentShopifyOrders({
+      actorId: user.id,
+      daysBack: Number(formData.get("daysBack") ?? 60),
+      limit: Number(formData.get("limit") ?? 100),
+    });
+
+    redirectUrl = `/orders?shopifySync=1&shopifyImported=${result.imported}&shopifySkipped=${result.skipped}`;
+  } catch (error) {
+    redirectUrl = `/orders?error=${encodeURIComponent(
+      getActionErrorMessage(error, "Unable to sync Shopify orders."),
+    )}`;
   }
 
   redirect(redirectUrl);

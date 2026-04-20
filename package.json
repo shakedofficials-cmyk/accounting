@@ -11,6 +11,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:demo": "tsx scripts/seed-demo.ts",
+    "db:reset:operational": "tsx scripts/reset-operational-data.ts",
     "db:portable:start": "powershell -ExecutionPolicy Bypass -File ./scripts/start-portable-postgres.ps1",
     "db:portable:stop": "powershell -ExecutionPolicy Bypass -File ./scripts/stop-portable-postgres.ps1",
     "test": "vitest run --coverage",

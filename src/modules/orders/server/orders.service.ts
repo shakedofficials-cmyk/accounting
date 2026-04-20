@@ -2,6 +2,7 @@ import { Prisma, type JournalSourceType } from "@prisma/client";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { hasShopifyConnectionEnv } from "@/lib/env";
 import { decomposeBundle } from "@/modules/catalog/domain/bundles";
 import { buildCustomFlavorMixConsumption } from "@/modules/orders/domain/custom-flavor-mix";
 import { assertJournalBalanced } from "@/modules/accounting/domain/journal";
@@ -29,7 +30,7 @@ const manualOrderSchema = z.object({
 export type ManualOrderInput = z.infer<typeof manualOrderSchema>;
 
 export async function getOrdersOverview() {
-  const [orders, bundleVariants, flavors, paymentMethods] = await Promise.all([
+  const [orders, bundleVariants, flavors, paymentMethods, latestShopifySync] = await Promise.all([
     db.salesOrder.findMany({
       include: {
         customer: true,
@@ -70,6 +71,9 @@ export async function getOrdersOverview() {
     }),
     db.flavor.findMany({ orderBy: { name: "asc" } }),
     db.paymentMethod.findMany({ orderBy: { name: "asc" } }),
+    db.shopifyOrder.findFirst({
+      orderBy: { syncedAt: "desc" },
+    }),
   ]);
 
   return {
@@ -77,6 +81,9 @@ export async function getOrdersOverview() {
     bundleVariants,
     flavors,
     paymentMethods,
+    shopifyConfigured: hasShopifyConnectionEnv(),
+    lastShopifySyncAt: latestShopifySync?.syncedAt ?? null,
+    shopifyOrderCount: orders.filter((order) => order.sourceType === "SHOPIFY").length,
   };
 }
 
