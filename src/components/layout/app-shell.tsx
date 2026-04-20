@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { LogoutButton } from "@/components/layout/logout-button";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { Badge } from "@/components/ui/badge";
 import { navigationItems } from "@/lib/navigation";
 import { hasPermission, type AuthUser } from "@/lib/auth/permissions";
@@ -99,9 +100,23 @@ export async function AppShell({ user, pathname, children }: AppShellProps) {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 p-6 lg:p-8">
-          {children}
-        </main>
+        <div className="min-w-0 flex-1 flex flex-col">
+          <header className="flex items-center gap-3 border-b border-border px-4 py-3 lg:hidden">
+            <MobileNav
+              pathname={pathname}
+              userPermissions={items.map((i) => i.permission)}
+            />
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-white font-display">
+                S
+              </div>
+              <p className="font-display text-sm font-bold tracking-tight">SHAKED Finance OS</p>
+            </div>
+          </header>
+          <main className="min-w-0 flex-1 p-4 lg:p-8">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );
