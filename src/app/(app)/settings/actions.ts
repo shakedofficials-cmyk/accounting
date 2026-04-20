@@ -3,7 +3,9 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { requireUser } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { getActionErrorMessage } from "@/lib/errors";
 import { clearOperationalData } from "@/modules/settings/server/operational-reset.service";
 import { replaceSettlementConfig, updateCompanyProfile } from "@/modules/settings/server/settings.service";
@@ -79,6 +81,33 @@ export async function updateSettlementConfigAction(formData: FormData) {
     });
   } catch (error) {
     redirectUrl = `/settings?error=${encodeURIComponent(getActionErrorMessage(error, "Unable to save settlement configuration."))}`;
+  }
+
+  redirect(redirectUrl);
+}
+
+export async function changePasswordAction(formData: FormData) {
+  const user = await requireUser("settings:manage");
+  let redirectUrl: Parameters<typeof redirect>[0] = "/settings?passwordChanged=1";
+
+  try {
+    const current = String(formData.get("currentPassword") ?? "");
+    const next = String(formData.get("newPassword") ?? "");
+    const confirm = String(formData.get("confirmPassword") ?? "");
+
+    if (next.length < 8) throw new Error("New password must be at least 8 characters.");
+    if (next !== confirm) throw new Error("New password and confirmation do not match.");
+
+    const dbUser = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    const valid = await verifyPassword(current, dbUser.passwordHash);
+    if (!valid) throw new Error("Current password is incorrect.");
+
+    await db.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await hashPassword(next) },
+    });
+  } catch (error) {
+    redirectUrl = `/settings?error=${encodeURIComponent(getActionErrorMessage(error, "Unable to change password."))}`;
   }
 
   redirect(redirectUrl);

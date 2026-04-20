@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getQueryValue } from "@/lib/utils";
 import { getSettingsOverview } from "@/modules/settings/server/settings.service";
 import {
+  changePasswordAction,
   clearOperationalDataAction,
   updateCompanyProfileAction,
   updateSettlementConfigAction,
@@ -27,6 +28,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const companyUpdated = getQueryValue(params.companyUpdated) === "1";
   const settlementUpdated = getQueryValue(params.settlementUpdated) === "1";
   const operationalReset = getQueryValue(params.operationalReset) === "1";
+  const passwordChanged = getQueryValue(params.passwordChanged) === "1";
 
   return (
     <div className="space-y-6">
@@ -44,6 +46,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           and settlement runs.
         </Notice>
       ) : null}
+      {passwordChanged ? <Notice variant="success">Password updated successfully.</Notice> : null}
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <Card>
@@ -177,6 +180,29 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 Clear demo operational data
               </Button>
             </div>
+          </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Change password</CardTitle>
+          <CardDescription>Update your account password. You must enter your current password to confirm.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={changePasswordAction} className="grid max-w-md gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Current password</Label>
+              <Input id="currentPassword" name="currentPassword" type="password" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New password</Label>
+              <Input id="newPassword" name="newPassword" type="password" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Input id="confirmPassword" name="confirmPassword" type="password" required />
+            </div>
+            <Button type="submit" className="w-fit">Update password</Button>
           </form>
         </CardContent>
       </Card>
